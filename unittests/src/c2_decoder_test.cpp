@@ -973,8 +973,8 @@ protected:
                         sts = GetC2ConstGraphicBlock(buffer_pack, &graphic_block);
                         EXPECT_EQ(sts, C2_OK) << NAMED(frame_index) << "Output buffer count: " << buffer_pack.buffers.size();
                     }
-                    if(nullptr != graphic_block) {
 
+                    if (nullptr != graphic_block) {
                         C2Rect crop = graphic_block->crop();
                         EXPECT_NE(crop.width, 0u);
                         EXPECT_NE(crop.height, 0u);
@@ -983,15 +983,11 @@ protected:
                             std::shared_ptr<C2Component> comp = component.lock();
                             if (comp) {
                                 C2StreamPictureSizeInfo::output size_info;
-                                // not support C2StreamCropRectInfo
-                                // C2StreamCropRectInfo::output crop_info;
-                                // sts = comp->intf()->query_vb({&size_info, &crop_info}, {}, C2_MAY_BLOCK, nullptr);
+
                                 sts = comp->intf()->query_vb({&size_info}, {}, C2_MAY_BLOCK, nullptr);
                                 EXPECT_EQ(sts, C2_OK);
                                 EXPECT_EQ(size_info.width, graphic_block->width());
                                 EXPECT_EQ(size_info.height, graphic_block->height());
-
-                                // EXPECT_EQ((C2Rect)crop_info, crop);
 
                                 comp = nullptr;
                             }
@@ -1250,78 +1246,78 @@ TEST_P(Decoder, State)
 // flushed with C2_NOT_FOUND, not C2_CANCELED.
 // C2_NOT_FOUND status should be returned as other error statuses are treated
 // by libstagefright as fatal.
-// TEST_P(Decoder, StopWhileDecoding)
-// {
-//     CallComponentTest<ComponentDesc>(GetParam(),
-//         [] (const ComponentDesc& desc, C2CompPtr comp, C2CompIntfPtr) {
+TEST_P(Decoder, StopWhileDecoding)
+{
+    CallComponentTest<ComponentDesc>(GetParam(),
+        [] (const ComponentDesc& desc, C2CompPtr comp, C2CompIntfPtr) {
 
-//         struct DecoderListener : public C2Component::Listener
-//         {
-//             void onWorkDone_nb(std::weak_ptr<C2Component>,
-//                 std::list<std::unique_ptr<C2Work>> workItems) override
-//             {
-//                 for (auto const& work : workItems) {
-//                     status_set_.insert(work->result);
-//                     got_work_ = true;
-//                 }
-//             }
+        struct DecoderListener : public C2Component::Listener
+        {
+            void onWorkDone_nb(std::weak_ptr<C2Component>,
+                std::list<std::unique_ptr<C2Work>> workItems) override
+            {
+                for (auto const& work : workItems) {
+                    status_set_.insert(work->result);
+                    got_work_ = true;
+                }
+            }
 
-//             void onTripped_nb(std::weak_ptr<C2Component>,
-//                 std::vector<std::shared_ptr<C2SettingResult>>) override {};
-//             void onError_nb(std::weak_ptr<C2Component>, uint32_t) override {};
+            void onTripped_nb(std::weak_ptr<C2Component>,
+                std::vector<std::shared_ptr<C2SettingResult>>) override {};
+            void onError_nb(std::weak_ptr<C2Component>, uint32_t) override {};
 
-//             std::set<c2_status_t> status_set_;
-//             std::atomic<bool> got_work_{false};
-//         };
-//         std::shared_ptr<DecoderListener> listener =
-//             std::make_shared<DecoderListener>();
+            std::set<c2_status_t> status_set_;
+            std::atomic<bool> got_work_{false};
+        };
+        std::shared_ptr<DecoderListener> listener =
+            std::make_shared<DecoderListener>();
 
-//         for (const std::vector<const StreamDescription*>& streams : desc.streams) {
+        for (const std::vector<const StreamDescription*>& streams : desc.streams) {
 
-//             const int REPEATS_COUNT = 3;
-//             for (int i = 0; i < REPEATS_COUNT; ++i) {
+            const int REPEATS_COUNT = 3;
+            for (int i = 0; i < REPEATS_COUNT; ++i) {
 
-//                 c2_status_t sts = comp->setListener_vb(listener, C2_MAY_BLOCK);
+                c2_status_t sts = comp->setListener_vb(listener, C2_MAY_BLOCK);
 
-//                 std::list<StreamChunk> stream_chunks = ReadChunks(streams);
-//                 std::unique_ptr<StreamReader> reader{StreamReader::Create(streams)};
+                std::list<StreamChunk> stream_chunks = ReadChunks(streams);
+                std::unique_ptr<StreamReader> reader{StreamReader::Create(streams)};
 
-//                 uint32_t frame_index = 0;
+                uint32_t frame_index = 0;
 
-//                 listener->got_work_ = false;
-//                 sts = comp->start();
-//                 EXPECT_EQ(sts, C2_OK);
+                listener->got_work_ = false;
+                sts = comp->start();
+                EXPECT_EQ(sts, C2_OK);
 
-//                 for (const StreamChunk& chunk : stream_chunks) {
+                for (const StreamChunk& chunk : stream_chunks) {
 
-//                     // if pass is not last stop queueing
-//                     if (i != REPEATS_COUNT - 1 && listener->got_work_) break;
+                    // if pass is not last stop queueing
+                    if (i != REPEATS_COUNT - 1 && listener->got_work_) break;
 
-//                     std::list<std::unique_ptr<C2Work>> works{1};
-//                     std::vector<char> stream_part = reader->GetRegionContents(chunk.region);
+                    std::list<std::unique_ptr<C2Work>> works{1};
+                    std::vector<char> stream_part = reader->GetRegionContents(chunk.region);
 
-//                     PrepareWork(frame_index++, comp, &works.front(), stream_part,
-//                         chunk.end_stream, chunk.header, chunk.complete_frame);
+                    PrepareWork(frame_index++, comp, &works.front(), stream_part,
+                        chunk.end_stream, chunk.header, chunk.complete_frame);
 
-//                     sts = comp->queue_nb(&works);
-//                     EXPECT_EQ(sts, C2_OK);
-//                 }
+                    sts = comp->queue_nb(&works);
+                    EXPECT_EQ(sts, C2_OK);
+                }
 
-//                 sts = comp->stop();
-//                 EXPECT_EQ(sts, C2_OK);
-//             }
-//         }
+                sts = comp->stop();
+                EXPECT_EQ(sts, C2_OK);
+            }
+        }
 
-//         std::set<c2_status_t> expected_status_set{C2_OK, C2_CANCELED};
-//         if (std::string(desc.component_name) != "c2.intel.vp9.decoder") {
-//             // h264, h265 streams have reordering what causes C2_NOT_FOUND works on stop,
-//             // vp9 has not.
-//             expected_status_set.insert(C2_NOT_FOUND);
-//         }
+        std::set<c2_status_t> expected_status_set{C2_OK, C2_CANCELED};
+        if (std::string(desc.component_name) != "c2.intel.vp9.decoder") {
+            // h264, h265 streams have reordering what causes C2_NOT_FOUND works on stop,
+            // vp9 has not.
+            expected_status_set.insert(C2_NOT_FOUND);
+        }
 
-//         EXPECT_EQ(listener->status_set_, expected_status_set);
-//     } );
-// }
+        EXPECT_EQ(listener->status_set_, expected_status_set);
+    } );
+}
 
 // Checks flush_sm implementation performance, how fast flush_sm
 // stops processing of queued works.
@@ -1330,80 +1326,80 @@ TEST_P(Decoder, State)
 // It should be not more than some threshold, suggested value is 20 frames.
 // It also checks total works count (processed + flushed) is equal to
 // enqueued count.
-// TEST_P(Decoder, FlushPerformance)
-// {
-//     CallComponentTest<ComponentDesc>(GetParam(),
-//         [] (const ComponentDesc& desc, C2CompPtr comp, C2CompIntfPtr) {
+TEST_P(Decoder, FlushPerformance)
+{
+    CallComponentTest<ComponentDesc>(GetParam(),
+        [] (const ComponentDesc& desc, C2CompPtr comp, C2CompIntfPtr) {
 
-//         MFX_DEBUG_TRACE_FUNC;
+        MFX_DEBUG_TRACE_FUNC;
 
-//         const int MAX_PROCESSED_COUNT = 20;
+        const int MAX_PROCESSED_COUNT = 20;
 
-//         struct DecoderListener : public C2Component::Listener
-//         {
-//             void onWorkDone_nb(std::weak_ptr<C2Component>,
-//                 std::list<std::unique_ptr<C2Work>> workItems) override
-//             {
-//                 MFX_DEBUG_TRACE_FUNC;
-//                 works_count_ += workItems.size();
-//                 MFX_DEBUG_TRACE_STREAM(NAMED(works_count_));
-//             }
+        struct DecoderListener : public C2Component::Listener
+        {
+            void onWorkDone_nb(std::weak_ptr<C2Component>,
+                std::list<std::unique_ptr<C2Work>> workItems) override
+            {
+                MFX_DEBUG_TRACE_FUNC;
+                works_count_ += workItems.size();
+                MFX_DEBUG_TRACE_STREAM(NAMED(works_count_));
+            }
 
-//             void onTripped_nb(std::weak_ptr<C2Component>,
-//                 std::vector<std::shared_ptr<C2SettingResult>>) override {};
-//             void onError_nb(std::weak_ptr<C2Component>, uint32_t) override {};
+            void onTripped_nb(std::weak_ptr<C2Component>,
+                std::vector<std::shared_ptr<C2SettingResult>>) override {};
+            void onError_nb(std::weak_ptr<C2Component>, uint32_t) override {};
 
-//             std::atomic<int> works_count_{0};
-//         };
+            std::atomic<int> works_count_{0};
+        };
 
-//         for (const std::vector<const StreamDescription*>& streams : desc.streams) {
+        for (const std::vector<const StreamDescription*>& streams : desc.streams) {
 
-//             std::shared_ptr<DecoderListener> listener =
-//                 std::make_shared<DecoderListener>();
+            std::shared_ptr<DecoderListener> listener =
+                std::make_shared<DecoderListener>();
 
-//             c2_status_t sts = comp->start();
-//             EXPECT_EQ(sts, C2_OK);
+            c2_status_t sts = comp->start();
+            EXPECT_EQ(sts, C2_OK);
 
-//             uint32_t frame_index = 0;
+            uint32_t frame_index = 0;
 
-//             sts = comp->setListener_vb(listener, C2_MAY_BLOCK);
+            sts = comp->setListener_vb(listener, C2_MAY_BLOCK);
 
-//             std::list<StreamChunk> stream_chunks = ReadChunks(streams);
-//             std::unique_ptr<StreamReader> reader{StreamReader::Create(streams)};
+            std::list<StreamChunk> stream_chunks = ReadChunks(streams);
+            std::unique_ptr<StreamReader> reader{StreamReader::Create(streams)};
 
-//             EXPECT_EQ(sts, C2_OK);
+            EXPECT_EQ(sts, C2_OK);
 
-//             for (const StreamChunk& chunk : stream_chunks) {
+            for (const StreamChunk& chunk : stream_chunks) {
 
-//                 std::list<std::unique_ptr<C2Work>> works{1};
-//                 std::vector<char> stream_part = reader->GetRegionContents(chunk.region);
+                std::list<std::unique_ptr<C2Work>> works{1};
+                std::vector<char> stream_part = reader->GetRegionContents(chunk.region);
 
-//                 PrepareWork(frame_index++, comp, &works.front(), stream_part,
-//                     chunk.end_stream, chunk.header, chunk.complete_frame);
+                PrepareWork(frame_index++, comp, &works.front(), stream_part,
+                    chunk.end_stream, chunk.header, chunk.complete_frame);
 
-//                 sts = comp->queue_nb(&works);
-//                 EXPECT_EQ(sts, C2_OK);
-//             }
-//             int works_before_flush = listener->works_count_.exchange(0); // reset counter
-//             std::list<std::unique_ptr<C2Work>> flushed_work;
-//             sts = comp->flush_sm(C2Component::FLUSH_COMPONENT, &flushed_work);
-//             EXPECT_EQ(sts, C2_OK);
+                sts = comp->queue_nb(&works);
+                EXPECT_EQ(sts, C2_OK);
+            }
+            int works_before_flush = listener->works_count_.exchange(0); // reset counter
+            std::list<std::unique_ptr<C2Work>> flushed_work;
+            sts = comp->flush_sm(C2Component::FLUSH_COMPONENT, &flushed_work);
+            EXPECT_EQ(sts, C2_OK);
 
-//             sts = comp->stop();
-//             EXPECT_EQ(sts, C2_OK);
+            sts = comp->stop();
+            EXPECT_EQ(sts, C2_OK);
 
-//             int works_after_flush = listener->works_count_.exchange(0);
-//             // works_after_flush is only a coarse approximation to the real number of works
-//             // we will process after signalling flush since there could be time elapsed
-//             // between resetting works_count_ and real flush
-//             std::cerr << "[          ] " << "Works after flush: " << works_after_flush
-//                 << std::endl;
-//             EXPECT_LE(works_after_flush, MAX_PROCESSED_COUNT);
+            int works_after_flush = listener->works_count_.exchange(0);
+            // works_after_flush is only a coarse approximation to the real number of works
+            // we will process after signalling flush since there could be time elapsed
+            // between resetting works_count_ and real flush
+            std::cerr << "[          ] " << "Works after flush: " << works_after_flush
+                << std::endl;
+            EXPECT_LE(works_after_flush, MAX_PROCESSED_COUNT);
 
-//             EXPECT_EQ(works_before_flush + works_after_flush + flushed_work.size(), stream_chunks.size());
-//         }
-//     } );
-// }
+            EXPECT_EQ(works_before_flush + works_after_flush + flushed_work.size(), stream_chunks.size());
+        }
+    } );
+}
 
 static C2ParamValues GetDefaultParamValues(const ComponentDesc& desc)
 {
@@ -1414,7 +1410,6 @@ static C2ParamValues GetDefaultParamValues(const ComponentDesc& desc)
     default_values.Append(new C2StreamBufferTypeSetting::output(0/*stream*/, C2BufferData::GRAPHIC));
     default_values.Append(new C2PortDelayTuning::output(desc.default_output_delay));
     default_values.Append(new C2PortDelayTuning::input(desc.default_input_delay));
-
     default_values.Append(new C2StreamColorAspectsTuning::output(0u, C2Color::RANGE_UNSPECIFIED,
                                                                      C2Color::PRIMARIES_UNSPECIFIED,
                                                                      C2Color::TRANSFER_UNSPECIFIED,
@@ -1426,21 +1421,9 @@ static C2ParamValues GetDefaultParamValues(const ComponentDesc& desc)
                                                                       C2Color::PRIMARIES_UNSPECIFIED,
                                                                       C2Color::TRANSFER_UNSPECIFIED,
                                                                       C2Color::MATRIX_UNSPECIFIED));
-        default_values.Append(new C2StreamColorAspectsInfo::output(0u, C2Color::RANGE_LIMITED,
-                                                                       C2Color::PRIMARIES_UNSPECIFIED,
-                                                                       C2Color::TRANSFER_UNSPECIFIED,
-                                                                       C2Color::MATRIX_UNSPECIFIED));
     }
 
-    // default_values.Append(new C2StreamPixelFormatInfo::output(0u, HAL_PIXEL_FORMAT_YCBCR_420_888));
-    // default_values.Append(new C2StreamProfileLevelInfo::input(0u, PROFILE_AVC_CONSTRAINED_BASELINE, LEVEL_AVC_5_2));
-    // default_values.Append(new C2PortMediaTypeSetting::output(0u, PROFILE_AVC_CONSTRAINED_BASELINE, LEVEL_AVC_5_2));
-    // default_values.Append(new C2PortMediaTypeSetting::input(0u, PROFILE_AVC_CONSTRAINED_BASELINE, LEVEL_AVC_5_2));
-    // default_values.Append(new C2PortBlockPoolsTuning::output(0u, HAL_PIXEL_FORMAT_YCBCR_420_888));
-    // default_values.Append(new C2StreamMaxBufferSizeInfo::input(0u, SINGLE_STREAM_ID, kMinInputBufferSize));
-    // // default_values.Append(new C2MaxVideoSizeHintPortSetting::output(0u, PROFILE_AVC_CONSTRAINED_BASELINE, LEVEL_AVC_5_2));
-    // // default_values.Append(new C2PortAllocatorsTuning::output(0u, HAL_PIXEL_FORMAT_YCBCR_420_888));
-    // default_values.Append(new C2StreamPictureSizeInfo::output(0u, SINGLE_STREAM_ID, MIN_W, MIN_H));
+    default_values.Append(new C2StreamPixelFormatInfo::output(0u, HAL_PIXEL_FORMAT_YCBCR_420_888));
 
     return default_values;
 }
@@ -1472,48 +1455,6 @@ TEST_P(Decoder, ComponentDefaultParams)
         default_values.Check(heap_params, false);
     }); // CallComponentTest
 }
-
-static C2ParamValues GetKeptParamValues()
-{
-    C2ParamValues kept_values;
-
-    kept_values.Append(new C2StreamPictureSizeInfo::output(0/*stream*/, 1280, 720));
-
-    C2Rect crop_rect = C2Rect(128, 64).at(32, 16);
-    // not support C2StreamCropRectInfo params
-    // kept_values.Append(new C2StreamCropRectInfo::output(0/*stream*/, crop_rect));
-    return kept_values;
-}
-
-// Configures C2StreamPictureSizeInfo::output, C2StreamCropRectInfo::output
-// and checks that their values
-// are kept and queried back the same.
-// TEST_P(Decoder, ComponentKeptParams)
-// {
-//     CallComponentTest<ComponentDesc>(GetParam(),
-//         [&] (const ComponentDesc&, C2CompPtr, C2CompIntfPtr comp_intf) {
-
-//         // check query through stack placeholders and the same with heap allocated
-//         std::vector<std::unique_ptr<C2Param>> heap_params;
-//         const C2ParamValues& kept_values = GetKeptParamValues();
-
-//         c2_blocking_t may_block{C2_DONT_BLOCK};
-//         std::vector<std::unique_ptr<C2SettingResult>> failures;
-
-//         c2_status_t res = comp_intf->config_vb(kept_values.GetExpectedParams(),
-//             may_block, &failures);
-//         EXPECT_EQ(res, C2_OK);
-
-//         EXPECT_EQ(failures.size(), 0u);
-
-//         res = comp_intf->query_vb(kept_values.GetStackPointers(),
-//             kept_values.GetIndices(), may_block, &heap_params);
-//         EXPECT_EQ(res, C2_OK);
-
-//         kept_values.CheckStackValues();
-//         kept_values.Check(heap_params, false);
-//     }); // CallComponentTest
-// }
 
 // This test runs Decode on streams by different decoders
 // on different decoding conditions
