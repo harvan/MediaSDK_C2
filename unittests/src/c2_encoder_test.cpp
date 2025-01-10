@@ -183,14 +183,14 @@ TEST_P(CreateEncoder, Create)
 
 // Checks that all successfully created encoding components expose C2ComponentInterface
 // and return correct information once queried (component name).
-// TEST_P(Encoder, intf)
-// {
-//     CallComponentTest<ComponentDesc>(GetParam(),
-//         [] (const ComponentDesc& desc, C2CompPtr, C2CompIntfPtr comp_intf) {
+TEST_P(Encoder, intf)
+{
+    CallComponentTest<ComponentDesc>(GetParam(),
+        [] (const ComponentDesc& desc, C2CompPtr, C2CompIntfPtr comp_intf) {
 
-//         EXPECT_EQ(comp_intf->getName(), desc.component_name);
-//     } );
-// }
+        EXPECT_EQ(comp_intf->getName(), desc.component_name);
+    } );
+}
 
 static void PrepareWork(uint32_t frame_index, bool last_frame, bool graphics_memory,
     std::shared_ptr<const C2Component> component,
